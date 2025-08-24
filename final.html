@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stone Material Sales Management</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sheetjs@x.x.x/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    :root {
+      --primary: #2c3e50;
+      --secondary: #7d8c9e;
+      --accent: #3498db;
+      --light: #ecf0f1;
+      --success: #27ae60;
+    }
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .navbar { background-color: var(--primary); }
+    .card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; border: none; }
+    .card-header { background-color: var(--primary); color: white; border-radius: 10px 10px 0 0 !important; }
+    .btn-primary { background-color: var(--accent); border: none; }
+    .btn-primary:hover { background-color: #2980b9; }
+    .material-badge { font-size: 0.85em; padding: 5px 10px; border-radius: 20px; }
+    .summary-card { transition: transform 0.3s; }
+    .summary-card:hover { transform: translateY(-5px); }
+    .table thead th { background-color: var(--primary); color: white; }
+    #salesHistory { max-height: 500px; overflow-y: auto; }
+    .section-title { border-bottom: 2px solid var(--secondary); padding-bottom: 10px; margin-bottom: 20px; color: var(--primary); }
+    .export-buttons { display: flex; gap: 10px; margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+    <div class="container">
+      <a class="navbar-brand" href="#"><i class="fas fa-mountain me-2"></i>Stone Material Sales</a>
+    </div>
+  </nav>
+
+  <div class="container mb-5">
+    <h1 class="text-center mb-4 section-title">Stone Material Sales Management</h1>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card summary-card bg-primary text-white text-center p-3">
+          <h5><i class="fas fa-truck-loading me-2"></i> Today's Sales</h5>
+          <h3 id="todaySales">0</h3>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card summary-card bg-success text-white text-center p-3">
+          <h5><i class="fas fa-cubes me-2"></i> Total Quantity</h5>
+          <h3 id="totalQuantity">0 T</h3>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card summary-card bg-info text-white text-center p-3">
+          <h5><i class="fas fa-users me-2"></i> Active Clients</h5>
+          <h3 id="activeClients">0</h3>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card summary-card bg-warning text-dark text-center p-3">
+          <h5><i class="fas fa-vehicle me-2"></i> Vehicles Today</h5>
+          <h3 id="vehiclesToday">0</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Sales Entry Form -->
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i>New Sales Entry</h4>
+          </div>
+          <div class="card-body">
+            <form id="salesForm">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="date" class="form-label">Date</label>
+                  <input type="date" class="form-control" id="date" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="couponNo" class="form-label">Coupon No</label>
+                  <input type="text" class="form-control" id="couponNo" required>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="vehicleNo" class="form-label">Vehicle Number</label>
+                <input type="text" class="form-control" id="vehicleNo" required>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="partyName" class="form-label">Party Name</label>
+                  <input type="text" class="form-control" id="partyName" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="clientName" class="form-label">Client Name</label>
+                  <input type="text" class="form-control" id="clientName" required>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Material Type</label>
+                <div>
+                  <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="material" id="dust" value="Dust" required><label class="form-check-label" for="dust">Dust</label></div>
+                  <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="material" id="mm6" value="6mm"><label class="form-check-label" for="mm6">6mm</label></div>
+                  <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="material" id="mm10" value="10mm"><label class="form-check-label" for="mm10">10mm</label></div>
+                  <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="material" id="mm20" value="20mm"><label class="form-check-label" for="mm20">20mm</label></div>
+                  <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="material" id="mm40" value="40mm"><label class="form-check-label" for="mm40">40mm</label></div>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="quantity" class="form-label">Quantity (Tons)</label>
+                <input type="number" step="0.01" class="form-control" id="quantity" required>
+              </div>
+              <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-2"></i>Save Entry</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sales History -->
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="fas fa-history me-2"></i>Recent Sales (Last 20)</h4>
+            <div><input type="text" class="form-control form-control-sm" placeholder="Search..." id="searchInput"></div>
+          </div>
+          <div class="card-body">
+            <div class="export-buttons">
+              <button class="btn btn-sm btn-success" id="exportExcel"><i class="fas fa-file-excel me-1"></i>Export to Excel</button>
+              <button class="btn btn-sm btn-danger" id="exportPDF"><i class="fas fa-file-pdf me-1"></i>Export to PDF</button>
+              <button class="btn btn-sm btn-secondary" id="refreshData"><i class="fas fa-sync-alt me-1"></i>Refresh Data</button>
+            </div>
+            <div id="salesHistory">
+              <table class="table table-striped table-hover">
+                <thead>
+                  <tr>
+                    <th>SL No</th>
+                    <th>Date</th>
+                    <th>Vehicle No</th>
+                    <th>Material</th>
+                    <th>Qty (T)</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="salesData">
+                  <tr><td colspan="6" class="text-center">No data available. Please refresh.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-dark text-white text-center py-3 mt-5">
+    <p class="mb-0">Stone Material Sales Management System © 2023 | Designed for Your Business</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Fixed Google Script URL
+    let scriptUrl = 'https://script.google.com/macros/s/AKfycbx8C5cCrq7ToljEO5sNpEJSMpvBil9WVJ1UKsWBV2WNXPKEQLuFNwoVmNKxW_Q_o656TQ/exec';  
+    let salesData = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('date').valueAsDate = new Date();
+      document.getElementById('couponNo').value = 'CP' + Math.floor(1000 + Math.random() * 9000);
+      loadSalesData();
+      document.getElementById('salesForm').addEventListener('submit', saveSalesData);
+      document.getElementById('exportExcel').addEventListener('click', exportToExcel);
+      document.getElementById('exportPDF').addEventListener('click', exportToPDF);
+      document.getElementById('refreshData').addEventListener('click', loadSalesData);
+      document.getElementById('searchInput').addEventListener('keyup', filterSalesData);
+    });
+     
+
+     // Save Google Script URL
+        function saveScriptUrl() {
+            scriptUrl = document.getElementById('scriptUrl').value;
+            if (scriptUrl) {
+                localStorage.setItem('googleScriptUrl', scriptUrl);
+                alert('URL saved successfully!');
+                loadSalesData();
+            } else {
+                alert('Please enter a valid URL');
+            }
+        }
+        
+        // Load sales data from Google Sheets
+        function loadSalesData() {
+            if (!scriptUrl) {
+                alert('Please set up the Google Script URL first');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('salesData').innerHTML = '<tr><td colspan="6" class="text-center">Loading data...</td></tr>';
+            
+            // Prepare request data
+            const requestData = {
+                action: 'getSales'
+            };
+            
+            // Send request to Google Apps Script
+            fetch(scriptUrl, {
+                method: 'POST',
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.result === 'success') {
+                    salesData = data.data;
+                    displaySalesData(salesData);
+                    updateSummaryCards(salesData);
+                } else {
+                    throw new Error('Failed to load data');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('salesData').innerHTML = '<tr><td colspan="6" class="text-center">Error loading data. Please check your URL.</td></tr>';
+            });
+        }
+        
+        // Display sales data in the table
+        function displaySalesData(data) {
+            const tableBody = document.getElementById('salesData');
+            
+            if (data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No sales data found</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            
+            // Show only the last 20 sales (most recent first)
+            const recentSales = data.slice(-20).reverse();
+            
+            recentSales.forEach(sale => {
+                // Determine badge color based on material
+                let badgeClass = 'bg-secondary';
+                if (sale[6] === 'Dust') badgeClass = 'bg-success';
+                else if (sale[6] === '6mm') badgeClass = 'bg-info';
+                else if (sale[6] === '10mm') badgeClass = 'bg-primary';
+                else if (sale[6] === '20mm') badgeClass = 'bg-warning';
+                else if (sale[6] === '40mm') badgeClass = 'bg-danger';
+                
+                html += `
+                    <tr>
+                        <td>${sale[0]}</td>
+                        <td>${formatDate(sale[1])}</td>
+                        <td>${sale[3]}</td>
+                        <td><span class="badge ${badgeClass} material-badge">${sale[6]}</span></td>
+                        <td>${sale[7]}</td>
+                        <td><button class="btn btn-sm btn-outline-primary view-details" data-id="${sale[0]}"><i class="fas fa-eye"></i></button></td>
+                    </tr>
+                `;
+            });
+            
+            tableBody.innerHTML = html;
+            
+            // Add event listeners to view buttons
+            document.querySelectorAll('.view-details').forEach(button => {
+                button.addEventListener('click', function() {
+                    const saleId = this.getAttribute('data-id');
+                    viewSaleDetails(saleId);
+                });
+            });
+        }
+        
+        // Format date for display
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString();
+        }
+        
+        // Update summary cards with data
+        function updateSummaryCards(data) {
+            // Today's date for filtering
+            const today = new Date().toLocaleDateString();
+            
+            // Calculate today's sales
+            const todaySales = data.filter(sale => {
+                const saleDate = new Date(sale[1]).toLocaleDateString();
+                return saleDate === today;
+            });
+            
+            // Calculate total quantity
+            const totalQuantity = data.reduce((sum, sale) => sum + parseFloat(sale[7]), 0);
+            
+            // Calculate unique clients
+            const uniqueClients = new Set(data.map(sale => sale[5]));
+            
+            // Calculate today's vehicles
+            const todayVehicles = new Set();
+            todaySales.forEach(sale => {
+                todayVehicles.add(sale[3]);
+            });
+            
+            // Update the UI
+            document.getElementById('todaySales').textContent = todaySales.length;
+            document.getElementById('totalQuantity').textContent = totalQuantity.toFixed(2) + ' T';
+            document.getElementById('activeClients').textContent = uniqueClients.size;
+            document.getElementById('vehiclesToday').textContent = todayVehicles.size;
+        }
+        
+        // Filter sales data based on search input
+        function filterSalesData() {
+            const searchText = this.value.toLowerCase();
+            const filteredData = salesData.filter(sale => {
+                return (
+                    sale[0].toString().includes(searchText) || // SL No
+                    sale[1].toLowerCase().includes(searchText) || // Date
+                    sale[3].toLowerCase().includes(searchText) || // Vehicle No
+                    sale[6].toLowerCase().includes(searchText) || // Material
+                    sale[7].toString().includes(searchText) // Quantity
+                );
+            });
+            
+            displaySalesData(filteredData);
+        }
+        
+        // Save sales data to Google Sheets
+        function saveSalesData(e) {
+            e.preventDefault();
+            
+            if (!scriptUrl) {
+                alert('Please set up the Google Script URL first');
+                return;
+            }
+            
+            // Get form values
+            const date = document.getElementById('date').value;
+            const couponNo = document.getElementById('couponNo').value;
+            const vehicleNo = document.getElementById('vehicleNo').value;
+            const partyName = document.getElementById('partyName').value;
+            const clientName = document.getElementById('clientName').value;
+            const material = document.querySelector('input[name="material"]:checked').value;
+            const quantity = document.getElementById('quantity').value;
+            
+            // Prepare request data
+            const requestData = {
+                action: 'addSale',
+                date: date,
+                couponNo: couponNo,
+                vehicleNo: vehicleNo,
+                partyName: partyName,
+                clientName: clientName,
+                material: material,
+                quantity: quantity
+            };
+            
+            // Send request to Google Apps Script
+            fetch(scriptUrl, {
+                method: 'POST',
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.result === 'success') {
+                    alert(`Sales entry saved successfully with ID: ${data.id}`);
+                    
+                    // Reset form
+                    document.getElementById('salesForm').reset();
+                    document.getElementById('date').valueAsDate = new Date();
+                    document.getElementById('couponNo').value = 'CP' + Math.floor(1000 + Math.random() * 9000);
+                    
+                    // Reload sales data
+                    loadSalesData();
+                } else {
+                    throw new Error('Failed to save data');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error saving data. Please check your connection and URL.');
+            });
+        }
+        
+        // View sale details
+        function viewSaleDetails(saleId) {
+            const sale = salesData.find(s => s[0] == saleId);
+            
+            if (sale) {
+                alert(`Sale Details:
+SL No: ${sale[0]}
+Date: ${formatDate(sale[1])}
+Coupon No: ${sale[2]}
+Vehicle No: ${sale[3]}
+Party Name: ${sale[4]}
+Client Name: ${sale[5]}
+Material: ${sale[6]}
+Quantity: ${sale[7]} Tons`);
+            }
+        }
+        
+        // Export to Excel
+        function exportToExcel() {
+            if (salesData.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            // Prepare data for export
+            const dataForExport = salesData.map(sale => ({
+                'SL No': sale[0],
+                'Date': formatDate(sale[1]),
+                'Coupon No': sale[2],
+                'Vehicle No': sale[3],
+                'Party Name': sale[4],
+                'Client Name': sale[5],
+                'Material': sale[6],
+                'Quantity (Tons)': sale[7]
+            }));
+            
+            // Create worksheet
+            const ws = XLSX.utils.json_to_sheet(dataForExport);
+            
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Sales Data');
+            
+            // Export to file
+            XLSX.writeFile(wb, 'stone_sales_data.xlsx');
+        }
+        
+        // Export to PDF
+        function exportToPDF() {
+            if (salesData.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(18);
+            doc.text('Stone Material Sales Report', 14, 22);
+            
+            // Add date
+            doc.setFontSize(12);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+            
+            // Prepare data for table
+            const tableData = salesData.map(sale => [
+                sale[0],
+                formatDate(sale[1]),
+                sale[2],
+                sale[3],
+                sale[4],
+                sale[5],
+                sale[6],
+                sale[7]
+            ]);
+            
+            // Create table
+            doc.autoTable({
+                head: [['SL No', 'Date', 'Coupon No', 'Vehicle No', 'Party Name', 'Client Name', 'Material', 'Qty (T)']],
+                body: tableData,
+                startY: 40,
+                theme: 'grid',
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [44, 62, 80] }
+            });
+            
+            // Save PDF
+            doc.save('stone_sales_report.pdf');
+        }
+    // --- All functions same as your version (loadSalesData, displaySalesData, updateSummaryCards, saveSalesData, viewSaleDetails, exportToExcel, exportToPDF, etc.) ---
+    // Just without saveScriptUrl() and localStorage.
+
+    // (Paste your existing JS functions here exactly as in your original code)
+  </script>
+</body>
+</html>
